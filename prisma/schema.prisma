@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            BigInt     @id
+  name          String
+  bio           String?
+  avatar_url    String?
+  discriminator String? @default("0000")
+  messages      Message[]
+  servers       ServerUser[]
+  user_snapshots UserSnapshot[]
+  owned_servers Server[]
+  attachments   Attachment[]
+}
+
+model UserSnapshot {
+  userId BigInt
+  name   String
+  bio  String?
+  avatar_url String?
+  discriminator String?
+  date   DateTime
+  user   User @relation(fields: [userId], references: [id])
+  @@id([userId, date])
+
+}
+
+model Server {
+  id       BigInt      @id
+  name     String
+  ownerId  BigInt?
+  icon     String?
+  owner    User?        @relation(fields: [ownerId], references: [id])
+  channels Channel[]
+  users    ServerUser[]
+  snapshots ServerSnapshot[]
+  attachments Attachment[]
+}
+
+model ServerSnapshot {
+  serverId BigInt
+  name     String
+  icon     String?
+  users    BigInt[]
+  channels BigInt[]
+  date     DateTime
+  ownerId   BigInt?
+  server   Server @relation(fields: [serverId], references: [id])
+  @@id([serverId, date])
+}
+
+model ServerUser {
+  userId   BigInt
+  serverId BigInt
+  joinedAt DateTime
+  user     User    @relation(fields: [userId], references: [id])
+  server   Server  @relation(fields: [serverId], references: [id])
+  nickname String
+  roles    String[]
+  @@id([userId, serverId])
+}
+
+model Channel {
+  id        BigInt       @id
+  serverId  BigInt
+  name      String
+  parentId  BigInt?
+  topic     String?
+  nsfw      Boolean
+  last_scanned DateTime?
+  last_message_id BigInt?
+  server    Server   @relation(fields: [serverId], references: [id])
+  messages  Message[]
+}
+
+model Message {
+  messageId    BigInt          @id
+  senderId     BigInt
+  channelId    BigInt
+  text         String
+  timestamp    DateTime
+  user         User         @relation(fields: [senderId], references: [id])
+  channel      Channel      @relation(fields: [channelId], references: [id])
+  attachments  Attachment[]
+  embeds       Embed[]
+  reactions    Reaction[]
+}
+
+model Attachment {
+  attachmentId  BigInt     @id
+  messageId     BigInt
+  userId        BigInt
+  serverId      BigInt
+  name          String?
+  description   String?
+  contentType   String?
+  url           String?
+  duration      Float?
+  size          Int?
+  width         Int?
+  height        Int?
+  user          User?      @relation(fields: [userId], references: [id])
+  server        Server?    @relation(fields: [serverId], references: [id])
+  message       Message @relation(fields: [messageId], references: [messageId])
+}
+
+model Embed {
+  id        BigInt     @id
+  messageId BigInt
+  json      String
+  message   Message @relation(fields: [messageId], references: [messageId])
+}
+
+model Reaction {
+  id        BigInt     @id
+  messageId BigInt
+  emojiId   BigInt?
+  emojiName String?
+  flags     Int
+  count     Int
+  message   Message @relation(fields: [messageId], references: [messageId])
+}
+
+model Workers {
+  id BigInt @id
+  name String
+  token String
+  lastLogin DateTime
+  servers BigInt[]
+}
+ 
